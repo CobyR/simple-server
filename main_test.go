@@ -38,3 +38,35 @@ func TestIndex(t *testing.T) {
 		t.Errorf("TestIndex: unexpected empty response body")
 	}
 }
+
+func TestHealth(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "/health", nil)
+	if err != nil {
+		t.Fatalf("TestIndex: couldn't create HTTP GET request: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+
+	health().ServeHTTP(rec, req)
+
+	res := rec.Result()
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			t.Fatalf("TestIndex: couldn't close response body: %v", err)
+		}
+	}()
+
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("TestHealth: got status code %v, but want: %v", res.StatusCode, http.StatusOK)
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Fatalf("TestHealth: could not read response body: %v", err)
+	}
+
+	if len(string(body)) == 0 {
+		t.Errorf("TestHealth: unexpected empty response body")
+	}
+}

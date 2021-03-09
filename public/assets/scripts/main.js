@@ -16,5 +16,5 @@ ready(function () {
     p.classList.add('salutation--subtitle');
     p.appendChild(text);
     jsContainer.appendChild(p);
-  },2000)
+  },1000)
 });
