@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -30,13 +31,17 @@ func logging(next http.Handler) http.Handler {
 // index is the handler responsible for rending the index page for the site.
 func index() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" && r.URL.Path != "/index" {
+			http.Error(w, "404 not found.", http.StatusNotFound)
+			return
+		}
 		b := struct {
 			Title        template.HTML
 			BusinessName string
 			Slogan       string
 		}{
-			Title:        template.HTML("Business &verbar; Landing"),
-			BusinessName: "Business,",
+			Title:        template.HTML("MuleSoft Hello World Service"),
+			BusinessName: "MuleSoft,",
 			Slogan:       "we get things done.",
 		}
 		err := templates.ExecuteTemplate(w, "base", &b)
@@ -44,23 +49,33 @@ func index() http.Handler {
 			http.Error(w, fmt.Sprintf("index: couldn't parse template: %v", err), http.StatusInternalServerError)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		// w.WriteHeader(http.StatusOK)
 	})
 }
 
-// public serves static assets such as CSS and JavaScript to clients.
-func public() http.Handler {
-	return http.StripPrefix("/public/", http.FileServer(http.Dir("./public")))
+// health serves an ok response if the app is running
+func health() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// normally we'd actually put some system health checks here,
+		//   but this is a simple-server
+		fmt.Fprintf(w, "Ok")
+	})
 }
 
 func main() {
 	mux := http.NewServeMux()
-	mux.Handle("/public/", logging(public()))
+
+	fileServer := http.FileServer(neuteredFileSystem{http.Dir("./public")})
+
+	mux.Handle("/public", http.NotFoundHandler())
+	mux.Handle("/public/", http.StripPrefix("/public", fileServer))
+	mux.Handle("/health", logging(health()))
 	mux.Handle("/", logging(index()))
 
 	port, ok := os.LookupEnv("PORT")
 	if !ok {
-		port = "8080"
+		port = "80"
 	}
 
 	addr := fmt.Sprintf(":%s", port)
@@ -75,4 +90,30 @@ func main() {
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("main: couldn't start simple server: %v\n", err)
 	}
+}
+
+type neuteredFileSystem struct {
+	fs http.FileSystem
+}
+
+func (nfs neuteredFileSystem) Open(path string) (http.File, error) {
+	f, err := nfs.fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := f.Stat()
+	if s.IsDir() {
+		index := filepath.Join(path, "index.html")
+		if _, err := nfs.fs.Open(index); err != nil {
+			closeErr := f.Close()
+			if closeErr != nil {
+				return nil, closeErr
+			}
+
+			return nil, err
+		}
+	}
+
+	return f, nil
 }

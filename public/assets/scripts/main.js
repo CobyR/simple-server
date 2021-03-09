@@ -7,12 +7,14 @@ function ready(fn) {
 }
 
 ready(function () {
-  let jsContainer = document.getElementsByClassName('js-container')[0];
-  let text = document.createTextNode('Period.');
-  let p = document.createElement('p');
-  p.classList.add('salutation');
-  p.classList.add('salutation--bg');
-  p.classList.add('salutation--subtitle');
-  p.appendChild(text);
-  jsContainer.appendChild(p);
+  setTimeout(() => {
+    let jsContainer = document.getElementsByClassName('js-container')[0];
+    let text = document.createTextNode('Period.');
+    let p = document.createElement('p');
+    p.classList.add('salutation');
+    p.classList.add('salutation--bg');
+    p.classList.add('salutation--subtitle');
+    p.appendChild(text);
+    jsContainer.appendChild(p);
+  },2000)
 });
